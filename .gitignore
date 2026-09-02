@@ -1,0 +1,26 @@
+# Données volumineuses (non versionnées)
+data/raw/analyses_2022.csv.zst
+data/raw/naiades-RM.zip
+data/geo/CLC_PNE_RG/*.gpkg
+data/geo/CLC_PNE_RG/*.qml
+data/geo/CLC_PNE_RG/*.sld
+data/geo/BD_CARTHAGE/
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+naiades-RM/
+CLC_RACAL_RGF_SHP/
+CLC_RACAL_RGF_SHP.zip

@@ -1,0 +1,7 @@
+-lien pour télécharger les données utilisées dans TP2 (CLC au format gpkg)
+
+https://www.data.gouv.fr/api/1/datasets/r/196a6f96-f558-4dec-9bdc-1359d32dc5d1
+
+
+accessible via
+https://www.data.gouv.fr/datasets/corine-land-cover-edition-2018-france-metropolitaine
