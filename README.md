@@ -1,88 +1,89 @@
-# Hydro Quality Clustering — Complex Data course (M1 SDSC)
+# Hydro Quality Clustering
 
-Project on tracking French river water quality using the NAIADES dataset.
-The brief: *"define quality classes for monitoring stations in relation to their geographic location."*
+Clustering French river monitoring stations into water-quality profiles from the national NAIADES dataset, then checking whether those profiles line up with the land use around each station.
 
-> **Hey Kian.** You don't need to rerun everything to remember what we did — it's all already computed below.
+Coursework project for the Complex Data course (M1 Data Science and Complex Systems, University of Strasbourg). The assignment: *define quality classes for monitoring stations in relation to their geographic location.*
 
-## Quick read (recommended)
+## Overview
 
-Just open these 3 notebooks, outputs already included:
+The pipeline works in three stages:
 
-1. `outputs/TP1_etude_preliminaire_executed.ipynb`
-2. `outputs/TP2_agregation_clustering_executed.ipynb`
-3. `outputs/TP3_visualisation_geo_executed.ipynb`
+1. **Cleaning** — start from raw NAIADES physico-chemical measurements, keep the 15 most frequently measured parameters, and build a clean station × sampling-date table.
+2. **Clustering** — aggregate each station's yearly readings and run KMeans (k = 5, matching the SANDRE/SEQ-Eau quality classes) to assign a quality profile to every station.
+3. **Geography** — cross the resulting clusters against Corine Land Cover categories and map them, to see whether water quality tracks land use.
 
-These are from a full clean run, top to bottom, no errors. No need to fire up Python or download Corine Land Cover again — stats, clustering, maps, it's all there.
+Short answer to the assignment's question: yes — for example, cluster 0 skews more forested, cluster 4 is more dominated by arable land.
 
-## If you want to rerun everything yourself
+![Water quality clusters over Corine Land Cover](outputs/figures/carte_clusters_p95_clc_niv2.png)
 
-Open the notebooks in `notebooks/` and run them in order:
+## Dataset
 
-1. `notebooks/TP1_etude_preliminaire.ipynb` → produces `outputs/tables/tp1_clean_dataset.csv`
-2. `notebooks/TP2_agregation_clustering.ipynb` → produces `outputs/tables/tp2_station_clusters.csv`
-3. `notebooks/TP3_visualisation_geo.ipynb` → produces the maps and cross-tabs
+- **NAIADES** (French water quality monitoring network) — physico-chemical analyses, sampling operations, and station metadata for 2022.
+- **Corine Land Cover** (EPSG:2154) — land-use polygons, used at level 2 (14 categories) for the cluster/land-use crosswalk.
 
-You'll need Python 3.12 with `pandas numpy matplotlib seaborn scikit-learn geopandas shapely zstandard pyogrio`, plus the raw data files that aren't in the repo (too big):
-- `data/raw/analyses_2022.csv.zst` (~101 MB)
-- `data/raw/stations.csv.zst`
-- `data/raw/operations_2022.csv.zst`
-- `data/geo/CLC_PNE_RG/CORINE_LAND_COVER_FRANCE_METROPOLITAINE_EPSG2154.gpkg` (~1.26 GB) — link in `data/reference/corine-land-cover.txt`
+Raw files are not versioned in this repo (several hundred MB to >1 GB); see [Getting started](#getting-started) for where to get them.
 
-## Where the results live
+## Method
 
-```
-outputs/
-├── TP1_etude_preliminaire_executed.ipynb     TP1 notebook with outputs
-├── TP2_agregation_clustering_executed.ipynb  TP2 notebook with outputs
-├── TP3_visualisation_geo_executed.ipynb      TP3 notebook with outputs
-├── tables/
-│   ├── tp1_clean_dataset.csv                 cleaned data (19,349 × 18)
-│   ├── tp2_station_clusters.csv              clusters per station (2,936 × 3)
-│   ├── tp3_crosstab_cluster_clc_effectifs.csv
-│   └── tp3_crosstab_cluster_clc_pct.csv
-└── figures/
-    ├── carte_clusters_p95_clc_niv2.png       main map (clusters over CLC level 2)
-    ├── carte_clusters_mean_clc_niv2.png      variant (cluster_mean)
-    ├── heatmap_cluster_clc.png               cluster × land cover heatmap
-    └── stations_clusters_nofond.png          quick preview, no basemap
-```
+- Of all physico-chemical parameters recorded, only the **15 most frequently measured** are kept, and only samples where all 15 are present together (no imputation).
+- Each station gets two cluster labels, both KMeans with **k = 5**:
+  - `cluster_mean` — annual mean of the raw, standardized values.
+  - `cluster_p95` — 95th-percentile aggregation over SEQ-Eau quality classes, which is closer to real regulatory practice since it surfaces poor readings instead of averaging them away. This is the label used for the geographic analysis.
+- Clusters are crossed against Corine Land Cover level-2 categories (station-level point overlay) to compare quality profiles against surrounding land use.
 
-## Making sense of the main outputs
+## Results
 
-**`tp1_clean_dataset.csv`** — Wide table of station × sample × date, one column per physico-chemical parameter. We kept the **15 most frequent parameters** and only samples where all 15 were measured together (plain `dropna`). This is the clean entry point for TP2.
+| Output | Description |
+|---|---|
+| `outputs/tables/tp1_clean_dataset.csv` | Cleaned station × sample table, 19,349 rows × 18 columns |
+| `outputs/tables/tp2_station_clusters.csv` | Cluster labels per station, 2,936 rows |
+| `outputs/tables/tp3_crosstab_cluster_clc_*.csv` | Cluster × land-use cross-tabulations (counts and %) |
+| `outputs/figures/carte_clusters_p95_clc_niv2.png` | Main map — clusters over Corine Land Cover |
+| `outputs/figures/heatmap_cluster_clc.png` | Cluster × land-use heatmap |
 
-**`tp2_station_clusters.csv`** — Two cluster labels per station, KMeans with **k = 5** (matching the 5 SANDRE/SEQ-Eau classes):
-- `cluster_mean`: annual mean aggregation of the raw (normalized) values.
-- `cluster_p95`: 95th-percentile aggregation over the **SEQ-Eau classes** — closer to how it's actually done in practice, since it surfaces the "bad" values instead of averaging them away.
+The `outputs/` notebooks (`*_executed.ipynb`) already contain a full clean run — open them directly to see the statistics, clustering, and maps without installing anything.
 
-TP3 uses `cluster_p95` as the main classification — it's more balanced and easier to interpret.
+A separate, more detailed **[written report](rapport.md)** applies the same methodology to a regional case study (Rhin-Meuse basin, 2013), with a full statistical writeup and an interpretation of clusters against relief and land use.
 
-**`tp3_crosstab_cluster_clc_*.csv`** — Crosses the clusters with Corine Land Cover **level 2** land-use categories (codes 11, 21, 23, 24, 31, ...). This is what answers the actual question from the brief: do water-quality clusters relate to land use? Short answer: **yes** — cluster 0 skews more forested, cluster 4 more dominated by arable land.
-
-**Maps (`outputs/figures/`)** — Stations colored by cluster, overlaid on CLC level-2 polygons (official 14-category legend).
-
-## Full structure
+## Project structure
 
 ```
 .
-├── README.md                          this file
-├── notebooks/                         notebooks to run
+├── notebooks/                         Notebooks to run, in order
 │   ├── TP1_etude_preliminaire.ipynb
 │   ├── TP2_agregation_clustering.ipynb
 │   └── TP3_visualisation_geo.ipynb
-├── outputs/                           outputs + executed notebooks
+├── outputs/                           Results: executed notebooks, tables, figures
 ├── data/
-│   ├── raw/        NAIADES data (not versioned, see above)
-│   ├── reference/  assignment brief, SEQ-Eau grids, SANDRE class table
-│   └── geo/        Corine Land Cover (not versioned)
-└── archive/                           original professor-provided solutions
+│   ├── raw/                           NAIADES data (not versioned)
+│   ├── reference/                     Assignment brief, SEQ-Eau grids, SANDRE class table
+│   └── geo/                           Corine Land Cover (not versioned)
+├── archive/                           Reference notebooks provided by the course
+└── rapport.md                         Full written report (regional case study)
 ```
 
-## Notes for the graded TP4
+## Getting started
 
-- The pipeline needs to work on a **different dataset** (probably `data/raw/naiades-RM.zip`, the Rhin-Meuse set).
-- Keep the same methodology: 15 most frequent parameters, 95th-percentile aggregation on SEQ-Eau classes, KMeans k=5.
-- Things to discuss in the report: mean vs. P95, limits of the CLC crossing (point polygon vs. riparian buffer), and next steps (BD Carthage, upstream watershed).
+### Prerequisites
 
-Good luck — you've got this.
+Python 3.12 with `pandas numpy matplotlib seaborn scikit-learn geopandas shapely zstandard pyogrio`.
+
+### Data
+
+The raw data files are too large to version and need to be placed manually:
+
+| File | Size | Notes |
+|---|---|---|
+| `data/raw/analyses_2022.csv.zst` | ~101 MB | NAIADES analyses |
+| `data/raw/stations.csv.zst` | — | NAIADES station metadata |
+| `data/raw/operations_2022.csv.zst` | — | NAIADES sampling operations |
+| `data/geo/CLC_PNE_RG/CORINE_LAND_COVER_FRANCE_METROPOLITAINE_EPSG2154.gpkg` | ~1.26 GB | see `data/reference/corine-land-cover.txt` for the download link |
+
+### Running the pipeline
+
+```bash
+# in order, each produces the inputs for the next
+notebooks/TP1_etude_preliminaire.ipynb      # -> outputs/tables/tp1_clean_dataset.csv
+notebooks/TP2_agregation_clustering.ipynb   # -> outputs/tables/tp2_station_clusters.csv
+notebooks/TP3_visualisation_geo.ipynb       # -> maps and cross-tabs in outputs/figures & outputs/tables
+```
